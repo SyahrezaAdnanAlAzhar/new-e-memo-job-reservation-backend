@@ -73,3 +73,30 @@ type Position struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
+
+// Batch Employee Processing DTOs
+type BatchEmployeeRequest struct {
+	Creates []BatchEmployeeCreate `json:"creates"`
+	Updates []BatchEmployeeUpdate `json:"updates"`
+	Deletes []BatchEmployeeDelete `json:"deletes"`
+}
+
+type BatchEmployeeCreate struct {
+	NPK                string `json:"npk" binding:"required"`
+	Name               string `json:"name" binding:"required"`
+	DepartmentID       int    `json:"department_id" binding:"required,gt=0"`
+	AreaID             *int   `json:"area_id"`
+	EmployeePositionID int    `json:"employee_position_id" binding:"required,gt=0"`
+}
+
+type BatchEmployeeUpdate struct {
+	NPK                string `json:"npk" binding:"required"`
+	Name               string `json:"name" binding:"required"`
+	DepartmentID       int    `json:"department_id" binding:"required,gt=0"`
+	AreaID             *int   `json:"area_id"`
+	EmployeePositionID int    `json:"employee_position_id" binding:"required,gt=0"`
+}
+
+type BatchEmployeeDelete struct {
+	NPK string `json:"npk" binding:"required"`
+}

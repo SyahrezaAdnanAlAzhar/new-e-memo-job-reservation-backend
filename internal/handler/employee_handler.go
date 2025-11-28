@@ -127,3 +127,32 @@ func (h *EmployeeHandler) GetEmployeeOptions(c *gin.Context) {
 
 	util.SuccessResponse(c, http.StatusOK, options)
 }
+
+// POST /employee/batch
+func (h *EmployeeHandler) BatchProcessEmployees(c *gin.Context) {
+	var req dto.BatchEmployeeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		util.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err.Error())
+		return
+	}
+
+	err := h.service.BatchProcessEmployees(req)
+	if err != nil {
+		switch err.Error() {
+		case "no operations provided":
+			util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+			return
+		case "duplicate NPK found in batch":
+			util.ErrorResponse(c, http.StatusConflict, err.Error(), nil)
+			return
+		case "invalid department_id, area_id, or employee_position_id in batch":
+			util.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+			return
+		default:
+			util.ErrorResponse(c, http.StatusInternalServerError, "Failed to process batch employees", err.Error())
+			return
+		}
+	}
+
+	util.SuccessResponse(c, http.StatusOK, gin.H{"message": "Batch employee processing completed successfully"})
+}

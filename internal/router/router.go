@@ -145,6 +145,7 @@ func setupMasterDataRoutes(group *gin.RouterGroup, h *AllHandlers, r *AllReposit
 		employeeRoutes := masterGroup.Group("/employee")
 		{
 			employeeRoutes.POST("", h.EmployeeHandler.CreateEmployee)
+			employeeRoutes.POST("/batch", h.EmployeeHandler.BatchProcessEmployees)
 			employeeRoutes.PUT("/:npk", h.EmployeeHandler.UpdateEmployee)
 			employeeRoutes.PATCH("/:npk/status", h.EmployeeHandler.UpdateEmployeeActiveStatus)
 		}

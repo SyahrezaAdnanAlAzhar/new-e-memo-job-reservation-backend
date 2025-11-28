@@ -96,3 +96,28 @@ func (s *EmployeeService) GetAllEmployees(filters dto.EmployeeFilter) (*dto.Pagi
 func (s *EmployeeService) GetEmployeeOptions(filters dto.EmployeeOptionsFilter) ([]dto.EmployeeOptionResponse, error) {
 	return s.repo.FindOptions(filters)
 }
+
+// BatchProcessEmployees validates and processes batch employee changes
+func (s *EmployeeService) BatchProcessEmployees(req dto.BatchEmployeeRequest) error {
+	// Validate that at least one operation is provided
+	if len(req.Creates) == 0 && len(req.Updates) == 0 && len(req.Deletes) == 0 {
+		return errors.New("no operations provided")
+	}
+
+	// Call repository method to process in a transaction
+	err := s.repo.BatchProcessEmployees(req.Creates, req.Updates, req.Deletes)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" { // unique_violation
+				return errors.New("duplicate NPK found in batch")
+			}
+			if pgErr.Code == "23503" { // foreign_key_violation
+				return errors.New("invalid department_id, area_id, or employee_position_id in batch")
+			}
+		}
+		return err
+	}
+
+	return nil
+}

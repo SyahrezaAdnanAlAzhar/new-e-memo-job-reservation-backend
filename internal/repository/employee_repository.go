@@ -262,3 +262,69 @@ func (r *EmployeeRepository) UpdateActiveStatus(npk string, isActive bool) error
 	}
 	return nil
 }
+
+// BatchProcessEmployees handles creating, updating, and deleting employees in a single transaction
+func (r *EmployeeRepository) BatchProcessEmployees(creates []dto.BatchEmployeeCreate, updates []dto.BatchEmployeeUpdate, deletes []dto.BatchEmployeeDelete) error {
+	tx, err := r.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Process Creates
+	if len(creates) > 0 {
+		createQuery := `
+			INSERT INTO employee (npk, name, department_id, area_id, employee_position_id, is_active)
+			VALUES ($1, $2, $3, $4, $5, true)`
+
+		for _, emp := range creates {
+			var areaID sql.NullInt64
+			if emp.AreaID != nil {
+				areaID = sql.NullInt64{Int64: int64(*emp.AreaID), Valid: true}
+			}
+
+			_, err = tx.Exec(createQuery, emp.NPK, emp.Name, emp.DepartmentID, areaID, emp.EmployeePositionID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Process Updates
+	if len(updates) > 0 {
+		updateQuery := `
+			UPDATE employee 
+			SET name = $1, department_id = $2, area_id = $3, employee_position_id = $4, updated_at = NOW()
+			WHERE npk = $5`
+
+		for _, emp := range updates {
+			var areaID sql.NullInt64
+			if emp.AreaID != nil {
+				areaID = sql.NullInt64{Int64: int64(*emp.AreaID), Valid: true}
+			}
+
+			_, err = tx.Exec(updateQuery, emp.Name, emp.DepartmentID, areaID, emp.EmployeePositionID, emp.NPK)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Process Deletes (soft delete by setting is_active = false)
+	if len(deletes) > 0 {
+		deleteQuery := `UPDATE employee SET is_active = false, updated_at = NOW() WHERE npk = $1`
+
+		for _, emp := range deletes {
+			_, err = tx.Exec(deleteQuery, emp.NPK)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return tx.Commit()
+}
